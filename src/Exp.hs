@@ -32,6 +32,15 @@ instance Show Exp where
   show (f :#: x) | isAtomic x = show f ++ " " ++ show x
                  | otherwise  = show f ++ " (" ++ show x ++ ")"
 
+-- only there so we can define fromInteger
+instance Num Exp where
+  fromInteger = BVar . fromInteger
+  a + b = error $ "Tried to add expression " ++ show a ++ " to " ++ show b
+  a * b = error $ "Tried to multiply expression " ++ show a ++ " with " ++ show b
+  negate a = error $ "Tried to negate expression " ++ show a
+  abs a = error $ "Tried to take abs of expression " ++ show a
+  signum a = error $ "Tried to get sign of expression " ++ show a
+
 instance IsString Exp where
   fromString = FVar
 
