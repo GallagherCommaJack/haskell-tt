@@ -11,7 +11,7 @@ type Name = Text
 
 -- uses a locally nameless approach
 data Exp = Set Int | Exp :-> Exp
-         | FVar Name | BVar  Int
+         | FVar Name | BVar Int
          | Lam  Exp Exp  | Exp :#: Exp
          deriving (Read, Eq, Generic)
 
@@ -73,7 +73,8 @@ wkExp = liftExp 0
 substIxs :: Vector Exp -> Int -> Exp -> Exp
 substIxs vs = bvarsOp aux
   where aux d i | i < d                        = BVar i
-                | {- d <= -} i < d + length vs = maybe (BVar i) (wkExp i) $ vs !! (i - d)
+                | {- d <= -} i < d + length vs = maybe (BVar (0 - 10 ^ 10)) -- if this happens SOMETHING IS VERY WRONG
+                                                       (wkExp i) $ vs !! (i - d)
                 | otherwise                    = BVar $ i - length vs
 
 substIx :: Int -> Exp -> Exp -> Exp

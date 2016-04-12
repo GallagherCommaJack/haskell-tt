@@ -112,10 +112,10 @@ instance (Ord a) => MonoFoldableOrd (Triple a) where
 
 inferLevel :: Name -> Vector (Name,Exp) -> Vector Exp -> (Name |-> Exp) -> Inductive
 inferLevel n p i c = Ind n lev p i c
-    where lp = maximumMay $ maxLevel <$> snd <$> p
-          li = maximumMay $ maxLevel <$> i
-          lc = maximumMay $ maxLevel <$> c
-          lev = fromMaybe 0 $ maximumEx <$> Triple <$> ((,,) <$> lp <*> li <*> lc)
+    where lp = fromMaybe 0 $ maximumMay $ maxLevel <$> snd <$> p
+          li = fromMaybe 0 $ maximumMay $ maxLevel <$> i
+          lc = fromMaybe 0 $ maximumMay $ maxLevel <$> c
+          lev = maximumEx $ Triple (lp,li,lc)
 
 mapWithIx :: (IsList (f Int), Item (f Int) ~ Int) =>
             (Element (f Int) ~ Int, IsSequence (f Int), Zip f, MonoFoldable (f b)) =>
@@ -132,12 +132,12 @@ mkParams = foldr (\(s,e) b -> e `cons` mapWithIx (substName s . BVar) b) mempty
 
 mkRecType :: Inductive -> Exp -> Exp
 mkRecType i@(Ind t _ ps is cs) p = assert (isValidInductive i) $
-  mkImpl (ps' ++ cs' ++ is) (mkApp (FVar t) (asSeq ixs) :-> p :#: BVar 0)
+  mkImpl (ps' ++ cs' ++ is) (mkApp (FVar t) (asVector ixs) :-> p :#: BVar 0)
        where ps' = fromList $ mkParams ps
-             psMap = mapFromList $ toList $ zip (fst <$> ps) [0..]
+             psMap = mapFromList $ toList $ zip (fst <$> ps) [0..length ps]
              cs' = fromList $ mapWithIx (\n -> substEnv (BVar <$> (+n) <$> psMap))
                             $ (\(c,e) -> mkCaseType (t,c) p e) <$> mapToList cs
-             ixs = reverse $ BVar <$> [0..length is - 1] ++ [length (is ++ cs') .. length (ps' ++ is ++ cs') - 1]
+             ixs = reverse $ BVar <$> [0..length is - 1] ++ [length is + length cs' .. length ps' + length is + length cs' - 1]
 
 
 wtype :: Int -> Int -> Inductive
@@ -165,8 +165,11 @@ false = inferLevel "False" [] [] []
 santa :: Inductive
 santa = inferLevel "Curry" [] [] [("Santa", ("Santa" :-> "False") :-> "Santa")]
 
+beq :: Inductive
+beq = inferLevel "BEq"[("A",Set 0)] ["A","A"] [("refl","A" :-> "BEq" :#: 0 :#: 0)]
+
 main :: IO ()
-main = flip assert (putStrLn "All ok!") $ isValidInductive (wtype 0 0)
+main = flip assert (putStrLn "All ok!") $ and (asSeq $ isValidInductive <$> (wtype <$> [0..10] <*> [0..10]))
                                         && isValidInductive vec
                                         && isValidInductive nat
                                         && isValidInductive true
